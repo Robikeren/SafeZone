@@ -1,4 +1,8 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:safezone/models/laporan_model.dart';
 import 'package:safezone/services/auth_service.dart';
 import 'package:safezone/services/laporan_service.dart';
@@ -15,7 +19,11 @@ class _BuatLaporanScreenState extends State<BuatLaporanScreen> {
   final _authService = AuthService();
   final _laporanService = LaporanService();
   bool _isLoading = false;
+  bool _isLoadingGps = false;
   String _selectedKategori = 'Kecelakaan';
+  double? _latitude;
+  double? _longitude;
+  XFile? _foto;
 
   final List<Map<String, dynamic>> _kategoriList = [
     {'label': 'Kecelakaan', 'icon': Icons.car_crash},
@@ -24,6 +32,85 @@ class _BuatLaporanScreenState extends State<BuatLaporanScreen> {
     {'label': 'Kriminal', 'icon': Icons.warning},
     {'label': 'Darurat Medis', 'icon': Icons.medical_services},
   ];
+
+  Future<void> _ambilLokasi() async {
+    setState(() => _isLoadingGps = true);
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('GPS tidak aktif. Aktifkan GPS dulu!')),
+        );
+        setState(() => _isLoadingGps = false);
+        return;
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Izin lokasi ditolak!')));
+          setState(() => _isLoadingGps = false);
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Izin lokasi ditolak permanen. Buka Settings untuk mengaktifkan.',
+            ),
+          ),
+        );
+        setState(() => _isLoadingGps = false);
+        return;
+      }
+
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      setState(() {
+        _latitude = position.latitude;
+        _longitude = position.longitude;
+        _isLoadingGps = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Lokasi berhasil diambil! ✅')),
+      );
+    } catch (e) {
+      setState(() => _isLoadingGps = false);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Gagal ambil lokasi: $e')));
+    }
+  }
+
+  Future<void> _ambilFoto() async {
+    final picker = ImagePicker();
+    final foto = await picker.pickImage(
+      source: ImageSource.camera,
+      imageQuality: 70,
+    );
+    if (foto != null) {
+      setState(() => _foto = foto);
+    }
+  }
+
+  Future<void> _ambilDariGaleri() async {
+    final picker = ImagePicker();
+    final foto = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 70,
+    );
+    if (foto != null) {
+      setState(() => _foto = foto);
+    }
+  }
 
   void _kirimLaporan() async {
     if (_deskripsiController.text.isEmpty) {
@@ -35,11 +122,7 @@ class _BuatLaporanScreenState extends State<BuatLaporanScreen> {
 
     setState(() => _isLoading = true);
 
-    // Ambil data user yang sedang login
     final user = _authService.currentUser;
-    final userDoc = await _authService.getUserRole();
-
-    // Ambil nama dari Firestore
     final snapshot = await _authService.getUserData();
     final nama = snapshot?['nama'] ?? 'Warga';
 
@@ -50,9 +133,9 @@ class _BuatLaporanScreenState extends State<BuatLaporanScreen> {
       kategori: _selectedKategori,
       deskripsi: _deskripsiController.text.trim(),
       status: 'Menunggu',
-      latitude: null, // GPS akan ditambah nanti
-      longitude: null,
-      fotoUrl: null, // Foto akan ditambah nanti
+      latitude: _latitude,
+      longitude: _longitude,
+      fotoUrl: null,
       createdAt: DateTime.now(),
     );
 
@@ -66,7 +149,7 @@ class _BuatLaporanScreenState extends State<BuatLaporanScreen> {
       ).showSnackBar(SnackBar(content: Text('Gagal kirim laporan: $error')));
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Laporan berhasil dikirim!')),
+        const SnackBar(content: Text('Laporan berhasil dikirim! ✅')),
       );
       Navigator.pop(context);
     }
@@ -88,7 +171,6 @@ class _BuatLaporanScreenState extends State<BuatLaporanScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(16),
@@ -115,7 +197,6 @@ class _BuatLaporanScreenState extends State<BuatLaporanScreen> {
 
               const SizedBox(height: 24),
 
-              // Pilih Kategori
               const Text(
                 'Kategori Kejadian',
                 style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
@@ -178,7 +259,6 @@ class _BuatLaporanScreenState extends State<BuatLaporanScreen> {
 
               const SizedBox(height: 24),
 
-              // Deskripsi
               const Text(
                 'Deskripsi Kejadian',
                 style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
@@ -195,47 +275,143 @@ class _BuatLaporanScreenState extends State<BuatLaporanScreen> {
                 ),
               ),
 
-              const SizedBox(height: 16),
+              const SizedBox(height: 24),
 
-              // Info GPS & Foto (coming soon)
+              const Text(
+                'Lokasi Kejadian',
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+              ),
+              const SizedBox(height: 8),
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.grey[100],
+                  color: _latitude != null
+                      ? const Color(0xFFE8F5E9)
+                      : Colors.grey[100],
                   borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: _latitude != null ? Colors.green : Colors.grey[300]!,
+                  ),
                 ),
-                child: const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                child: Row(
                   children: [
-                    Row(
-                      children: [
-                        Icon(Icons.location_on, color: Colors.grey),
-                        SizedBox(width: 8),
-                        Text(
-                          'Lokasi GPS — Tersedia di versi Android',
-                          style: TextStyle(color: Colors.grey, fontSize: 13),
-                        ),
-                      ],
+                    Icon(
+                      _latitude != null
+                          ? Icons.location_on
+                          : Icons.location_off,
+                      color: _latitude != null ? Colors.green : Colors.grey,
                     ),
-                    SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Icon(Icons.camera_alt, color: Colors.grey),
-                        SizedBox(width: 8),
-                        Text(
-                          'Foto Bukti — Tersedia di versi Android',
-                          style: TextStyle(color: Colors.grey, fontSize: 13),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _latitude != null
+                            ? 'Lokasi: ${_latitude!.toStringAsFixed(5)}, ${_longitude!.toStringAsFixed(5)}'
+                            : 'Lokasi belum diambil',
+                        style: TextStyle(
+                          color: _latitude != null ? Colors.green : Colors.grey,
+                          fontSize: 13,
                         ),
-                      ],
+                      ),
+                    ),
+                    ElevatedButton(
+                      onPressed: _isLoadingGps ? null : _ambilLokasi,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFE53935),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: _isLoadingGps
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : const Text('Ambil GPS'),
                     ),
                   ],
                 ),
               ),
 
+              const SizedBox(height: 24),
+
+              const Text(
+                'Foto Bukti',
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+              ),
+              const SizedBox(height: 8),
+
+              if (_foto != null) ...[
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: kIsWeb
+                      ? Image.network(
+                          _foto!.path,
+                          height: 200,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                        )
+                      : Image.file(
+                          File(_foto!.path),
+                          height: 200,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                        ),
+                ),
+                const SizedBox(height: 8),
+                TextButton.icon(
+                  onPressed: () => setState(() => _foto = null),
+                  icon: const Icon(Icons.delete, color: Colors.red),
+                  label: const Text(
+                    'Hapus foto',
+                    style: TextStyle(color: Colors.red),
+                  ),
+                ),
+              ],
+
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _ambilFoto,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFFE53935),
+                        side: const BorderSide(color: Color(0xFFE53935)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      icon: const Icon(Icons.camera_alt),
+                      label: const Text('Kamera'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _ambilDariGaleri,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFFE53935),
+                        side: const BorderSide(color: Color(0xFFE53935)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      icon: const Icon(Icons.photo_library),
+                      label: const Text('Galeri'),
+                    ),
+                  ),
+                ],
+              ),
+
               const SizedBox(height: 32),
 
-              // Tombol Kirim
               SizedBox(
                 width: double.infinity,
                 height: 50,
