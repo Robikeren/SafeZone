@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:safezone/models/laporan_model.dart';
+import 'package:safezone/screens/admin/detail_laporan_screen.dart';
+import 'package:safezone/screens/admin/nomor_darurat_screen.dart';
+import 'package:safezone/screens/admin/peta_insiden_admin_screen.dart';
 import 'package:safezone/services/auth_service.dart';
 import 'package:safezone/services/laporan_service.dart';
 
@@ -34,97 +37,6 @@ class AdminHomeScreen extends StatelessWidget {
     }
   }
 
-  void _showUpdateStatus(BuildContext context, LaporanModel laporan) {
-    final laporanService = LaporanService();
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (_) {
-        return Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Update Status Laporan',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                laporan.deskripsi,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: Colors.grey),
-              ),
-              const SizedBox(height: 24),
-              // Tombol status
-              _statusButton(
-                context: context,
-                label: 'Menunggu',
-                color: Colors.grey,
-                laporan: laporan,
-                laporanService: laporanService,
-              ),
-              const SizedBox(height: 8),
-              _statusButton(
-                context: context,
-                label: 'Diproses',
-                color: Colors.orange,
-                laporan: laporan,
-                laporanService: laporanService,
-              ),
-              const SizedBox(height: 8),
-              _statusButton(
-                context: context,
-                label: 'Selesai',
-                color: Colors.green,
-                laporan: laporan,
-                laporanService: laporanService,
-              ),
-              const SizedBox(height: 16),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _statusButton({
-    required BuildContext context,
-    required String label,
-    required Color color,
-    required LaporanModel laporan,
-    required LaporanService laporanService,
-  }) {
-    final isActive = laporan.status == label;
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton(
-        onPressed: isActive
-            ? null
-            : () async {
-                await laporanService.updateStatus(laporan.id, label);
-                Navigator.pop(context);
-              },
-        style: ElevatedButton.styleFrom(
-          backgroundColor: isActive ? color : color.withOpacity(0.1),
-          foregroundColor: isActive ? Colors.white : color,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-        ),
-        child: Text(
-          isActive ? '✓ $label (Aktif)' : label,
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final authService = AuthService();
@@ -137,6 +49,28 @@ class AdminHomeScreen extends StatelessWidget {
         foregroundColor: Colors.white,
         title: const Text('Dasbor Admin'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.phone),
+            tooltip: 'Nomor Darurat',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const NomorDaruratScreen()),
+              );
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.map),
+            tooltip: 'Peta Insiden',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const PetaInsidenAdminScreen(),
+                ),
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () async {
@@ -312,7 +246,15 @@ class AdminHomeScreen extends StatelessWidget {
                                   ),
                                 ],
                               ),
-                              onTap: () => _showUpdateStatus(context, item),
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        DetailLaporanScreen(laporan: item),
+                                  ),
+                                );
+                              },
                             ),
                           );
                         },

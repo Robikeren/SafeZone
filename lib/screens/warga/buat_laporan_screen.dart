@@ -139,7 +139,7 @@ class _BuatLaporanScreenState extends State<BuatLaporanScreen> {
       createdAt: DateTime.now(),
     );
 
-    final error = await _laporanService.buatLaporan(laporan);
+    final error = await _laporanService.buatLaporan(laporan, foto: _foto);
 
     setState(() => _isLoading = false);
 
