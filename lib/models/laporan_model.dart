@@ -9,6 +9,7 @@ class LaporanModel {
   final double? longitude;
   final String? fotoUrl;
   final DateTime createdAt;
+  final bool isEmergency;
 
   LaporanModel({
     required this.id,
@@ -21,6 +22,7 @@ class LaporanModel {
     this.longitude,
     this.fotoUrl,
     required this.createdAt,
+    this.isEmergency = false,
   });
 
   Map<String, dynamic> toMap() {
@@ -35,6 +37,7 @@ class LaporanModel {
       'longitude': longitude,
       'fotoUrl': fotoUrl,
       'createdAt': createdAt.toIso8601String(),
+      'isEmergency': isEmergency,
     };
   }
 
@@ -50,6 +53,7 @@ class LaporanModel {
       longitude: map['longitude']?.toDouble(),
       fotoUrl: map['fotoUrl'],
       createdAt: DateTime.parse(map['createdAt']),
+      isEmergency: map['isEmergency'] ?? false,
     );
   }
 }

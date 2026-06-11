@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:safezone/models/laporan_model.dart';
 import 'package:safezone/screens/admin/detail_laporan_screen.dart';
+import 'package:safezone/screens/admin/grafik_screen.dart';
 import 'package:safezone/screens/admin/nomor_darurat_screen.dart';
 import 'package:safezone/screens/admin/peta_insiden_admin_screen.dart';
 import 'package:safezone/services/auth_service.dart';
@@ -49,6 +50,16 @@ class AdminHomeScreen extends StatelessWidget {
         foregroundColor: Colors.white,
         title: const Text('Dasbor Admin'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.bar_chart),
+            tooltip: 'Grafik Laporan',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const GrafikScreen()),
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.phone),
             tooltip: 'Nomor Darurat',

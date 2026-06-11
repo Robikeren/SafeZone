@@ -2,12 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:safezone/models/laporan_model.dart';
 import 'package:safezone/screens/chat/chat_screen.dart';
-import 'package:safezone/services/laporan_service.dart';
 
-class DetailLaporanScreen extends StatelessWidget {
+class DetailLaporanWargaScreen extends StatelessWidget {
   final LaporanModel laporan;
 
-  const DetailLaporanScreen({super.key, required this.laporan});
+  const DetailLaporanWargaScreen({super.key, required this.laporan});
 
   Color _statusColor(String status) {
     switch (status) {
@@ -37,73 +36,6 @@ class DetailLaporanScreen extends StatelessWidget {
     }
   }
 
-  void _showUpdateStatus(BuildContext context) {
-    final laporanService = LaporanService();
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (_) {
-        return Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Update Status Laporan',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 16),
-              _statusBtn(context, 'Menunggu', Colors.grey, laporanService),
-              const SizedBox(height: 8),
-              _statusBtn(context, 'Diproses', Colors.orange, laporanService),
-              const SizedBox(height: 8),
-              _statusBtn(context, 'Selesai', Colors.green, laporanService),
-              const SizedBox(height: 16),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _statusBtn(
-    BuildContext context,
-    String label,
-    Color color,
-    LaporanService service,
-  ) {
-    final isActive = laporan.status == label;
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton(
-        onPressed: isActive
-            ? null
-            : () async {
-                await service.updateStatus(laporan.id, label);
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Status diupdate ke $label')),
-                );
-              },
-        style: ElevatedButton.styleFrom(
-          backgroundColor: isActive ? color : color.withOpacity(0.1),
-          foregroundColor: isActive ? Colors.white : color,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-        ),
-        child: Text(
-          isActive ? '✓ $label (Aktif)' : label,
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -112,29 +44,6 @@ class DetailLaporanScreen extends StatelessWidget {
         backgroundColor: const Color(0xFFE53935),
         foregroundColor: Colors.white,
         title: const Text('Detail Laporan'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.chat),
-            tooltip: 'Chat dengan Warga',
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) =>
-                      ChatScreen(laporan: laporan, currentRole: 'admin'),
-                ),
-              );
-            },
-          ),
-          TextButton.icon(
-            onPressed: () => _showUpdateStatus(context),
-            icon: const Icon(Icons.edit, color: Colors.white, size: 18),
-            label: const Text(
-              'Update Status',
-              style: TextStyle(color: Colors.white),
-            ),
-          ),
-        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -205,14 +114,14 @@ class DetailLaporanScreen extends StatelessWidget {
 
             const SizedBox(height: 12),
 
-            // Tombol Chat menonjol
+            // Tombol Chat
             GestureDetector(
               onTap: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (_) =>
-                        ChatScreen(laporan: laporan, currentRole: 'admin'),
+                        ChatScreen(laporan: laporan, currentRole: 'warga'),
                   ),
                 );
               },
@@ -228,7 +137,7 @@ class DetailLaporanScreen extends StatelessWidget {
                     Icon(Icons.chat, color: Colors.white),
                     SizedBox(width: 12),
                     Text(
-                      'Chat dengan Warga',
+                      'Chat dengan Admin',
                       style: TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
@@ -244,12 +153,12 @@ class DetailLaporanScreen extends StatelessWidget {
 
             const SizedBox(height: 12),
 
-            // Info Pelapor
+            // Info Laporan
             _sectionCard(
-              title: 'Informasi Pelapor',
+              title: 'Informasi Laporan',
               child: Column(
                 children: [
-                  _infoRow(Icons.person, 'Nama', laporan.namaPelapor),
+                  _infoRow(Icons.category, 'Kategori', laporan.kategori),
                   const Divider(),
                   _infoRow(
                     Icons.access_time,
@@ -263,6 +172,8 @@ class DetailLaporanScreen extends StatelessWidget {
                     'ID Laporan',
                     laporan.id.substring(0, 8).toUpperCase(),
                   ),
+                  const Divider(),
+                  _infoRow(Icons.info_outline, 'Status', laporan.status),
                 ],
               ),
             ),
